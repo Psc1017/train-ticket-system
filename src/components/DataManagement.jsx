@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Card, 
   Button, 
@@ -8,7 +8,8 @@ import {
   Space,
   Alert,
   Divider,
-  Tag
+  Tag,
+  Input
 } from 'antd'
 import { 
   UploadOutlined, 
@@ -23,6 +24,13 @@ function DataManagement({ dbReady }) {
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [importingText, setImportingText] = useState('')
+  const [dataSourceUrl, setDataSourceUrl] = useState('')
+
+  // 初始化读取本地保存的数据源URL
+  useEffect(() => {
+    const saved = localStorage.getItem('sharedDataSourceUrl')
+    if (saved) setDataSourceUrl(saved)
+  }, [])
 
   const handleImportSampleData = async () => {
     if (!dbReady) {
@@ -117,6 +125,95 @@ function DataManagement({ dbReady }) {
     }
   }
 
+  // 从数据源URL同步
+  const handleSyncFromUrl = async () => {
+    if (!dbReady) {
+      message.error('数据库未初始化')
+      return
+    }
+    if (!dataSourceUrl || !/^https?:\/\//i.test(dataSourceUrl)) {
+      message.warning('请填写有效的数据源URL（http/https）')
+      return
+    }
+
+    // 保存URL到本地
+    localStorage.setItem('sharedDataSourceUrl', dataSourceUrl)
+
+    setImporting(true)
+    setProgress(0)
+    setImportingText('正在从数据源获取文件...')
+
+    try {
+      // 尝试获取远端JSON文本
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000) // 5分钟超时
+
+      const response = await fetch(dataSourceUrl, { signal: controller.signal })
+      clearTimeout(timeout)
+      if (!response.ok) throw new Error(`网络错误 ${response.status}`)
+
+      setImportingText('正在下载数据...')
+      setProgress(10)
+
+      // 优先尝试逐块读取以便显示下载进度（若不可用则退化为一次性读取）
+      let text
+      try {
+        const reader = response.body?.getReader()
+        if (reader) {
+          const chunks = []
+          let received = 0
+          const contentLength = Number(response.headers.get('content-length')) || 0
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            chunks.push(value)
+            received += value.length
+            if (contentLength) {
+              const pct = 10 + Math.min(70, Math.floor((received / contentLength) * 70))
+              setProgress(pct)
+            }
+          }
+          const decoder = new TextDecoder('utf-8')
+          text = decoder.decode(new Blob(chunks))
+        } else {
+          text = await response.text()
+        }
+      } catch (_) {
+        // 回退到一次性读取
+        text = await response.text()
+      }
+
+      setImportingText('正在解析JSON数据...')
+      setProgress((p) => Math.max(p, 85))
+
+      const data = JSON.parse(text)
+      if (!Array.isArray(data)) throw new Error('数据格式必须为JSON数组')
+
+      setImportingText(`准备导入 ${data.length} 条数据...`)
+      setProgress(90)
+
+      // 导入数据库
+      await dbManager.importTickets(data)
+
+      setImportingText('导入完成！')
+      setProgress(100)
+      message.success(`已从数据源导入 ${data.length} 条数据`)
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        message.error('同步超时，请检查网络或稍后重试')
+      } else {
+        message.error('同步失败: ' + error.message)
+      }
+      console.error('同步失败:', error)
+    } finally {
+      setTimeout(() => {
+        setImporting(false)
+        setImportingText('')
+        setProgress(0)
+      }, 1500)
+    }
+  }
+
   const handleClearData = async () => {
     if (!window.confirm('确定要清空所有数据吗？此操作不可恢复！')) {
       return
@@ -156,6 +253,24 @@ function DataManagement({ dbReady }) {
         style={{ marginBottom: 24 }}
       >
         <Space direction="vertical" style={{ width: '100%' }} size="large">
+          <div>
+            <div style={{ marginBottom: 8 }}>共享数据源URL（所有设备共用）：</div>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                placeholder="粘贴JSON直链，例如 GitHub Releases 资源链接"
+                value={dataSourceUrl}
+                onChange={(e) => setDataSourceUrl(e.target.value)}
+                disabled={importing}
+              />
+              <Button type="primary" onClick={handleSyncFromUrl} loading={importing}>
+                一键同步
+              </Button>
+            </Space.Compact>
+            <Tag color="geekblue" style={{ marginTop: 8 }}>
+              将URL保存在本机，启动时可再次使用；更新远端文件后点击一键同步即可全端生效
+            </Tag>
+          </div>
+
           <div>
             <Button
               type="primary"
