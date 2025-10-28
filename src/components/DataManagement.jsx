@@ -148,7 +148,9 @@ function DataManagement({ dbReady }) {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000) // 5分钟超时
 
-      const response = await fetch(dataSourceUrl, { signal: controller.signal })
+      // 使用服务端代理，绕过 CORS：/api/proxy?url=<encoded>
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(dataSourceUrl)}`
+      const response = await fetch(proxyUrl, { signal: controller.signal })
       clearTimeout(timeout)
       if (!response.ok) throw new Error(`网络错误 ${response.status}`)
 
