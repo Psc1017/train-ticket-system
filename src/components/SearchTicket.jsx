@@ -286,9 +286,9 @@ function SearchTicket({ dbReady }) {
 
   return (
     <div>
-      <Card style={{ marginBottom: 16, background: '#f0f9ff' }}>
+      <Card style={{ marginBottom: 16, background: '#f0f9ff' }} bodyStyle={{ padding: 12 }}>
         <Space size="middle" style={{ width: '100%', justifyContent: 'space-between' }}>
-          <Space>
+          <Space wrap>
             {participantId ? (
               <>
                 <span><strong>当前参与者编号:</strong></span>
@@ -299,7 +299,7 @@ function SearchTicket({ dbReady }) {
             )}
           </Space>
           
-          <Space>
+          <Space wrap>
             <Input
               placeholder="输入参与者编号（如：张三、P001）"
               value={idInputValue}
@@ -325,7 +325,7 @@ function SearchTicket({ dbReady }) {
           onFinish={handleSearch}
         >
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item
                 label="出发站"
                 name="fromStation"
@@ -346,7 +346,7 @@ function SearchTicket({ dbReady }) {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item
                 label="到达站"
                 name="toStation"
@@ -367,7 +367,7 @@ function SearchTicket({ dbReady }) {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item
                 label="出行日期"
                 name="travelDate"
@@ -379,7 +379,7 @@ function SearchTicket({ dbReady }) {
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label=" ">
                 <Button 
                   type="primary" 
@@ -398,7 +398,7 @@ function SearchTicket({ dbReady }) {
           <Divider />
           
           <Row gutter={16}>
-            <Col span={6}>
+            <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item label="折扣模式">
                 <Switch
                   checked={useComplexDiscount}

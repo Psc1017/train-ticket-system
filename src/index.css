@@ -17,4 +17,23 @@ body {
   min-height: 100vh;
 }
 
+/* 响应式微调 */
+@media (max-width: 768px) {
+  .ant-card {
+    border-radius: 8px;
+  }
+  .ant-form-item {
+    margin-bottom: 12px;
+  }
+  .ant-statistic-content {
+    font-size: 16px;
+  }
+  .ant-btn {
+    height: 40px;
+  }
+  .ant-input, .ant-select-selector, .ant-picker {
+    height: 40px !important;
+  }
+}
+
 
